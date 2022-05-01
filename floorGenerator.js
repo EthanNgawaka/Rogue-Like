@@ -16,7 +16,6 @@ function generateWallsList(availableSidesId,x,y,w,h,thickness){ // returns a lis
     }
     if(availableSidesId[2]){ // entry above
         output.push([x,y,w*0.3,thickness,'wall']);
-        output.push([x+w*0.3,y,w*0.4,thickness/2,'platform']);
         output.push([x+w*0.7,y,w*0.3,thickness,'wall']);
     }else{
         output.push([x,y,w,thickness,'wall']);
@@ -197,4 +196,4 @@ function generateFloor(x,y,roomSize,mainPathLength,subroomPasses){
 }
 
 
-generateFloor(0,0,2000,6,2);
+generateFloor(0,0,2400,6,2);

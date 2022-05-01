@@ -7,8 +7,11 @@ let cameraIntensity = 2;
 let lvlObjs = [];
 
 
-lvlObjs.push(['gDeposit',900,1700,100,100,100,0])
+lvlObjs.push(['gDeposit',900,1700,100,100,100,0])// type, x, y, w, h, amountOfGStored, iFrames
 
+walls.push([200,1000,600,32,'platform',[[200,1000],[1400,1000],[1400,1600]],0, 0.02, 1, 1, [0,0]])// path, currentNode, speed, loop?, dirOfItr, oldPos
+
+walls.push([300,800,60,900,'belt'])
 
 function gBurst(amount,x,y){
     for(let i = 0; i < amount; i++){
@@ -40,12 +43,34 @@ function draw(){
     player.draw();
     for(let wall of walls){
         switch(wall[4]){
+            case 'platform':
+                drawRect([wall[0],wall[1],wall[2],wall[3]],'black');
+                break;
             case 'wall':
                 drawRect([wall[0],wall[1],wall[2],wall[3]],'black');
                 break;
             case 'belt':
                 drawRect([wall[0],wall[1],wall[2],wall[3]],'blue');
                 break;
+            case 'spike':
+                drawRect([wall[0],wall[1],wall[2],wall[3]],'red');
+        }
+        if(wall[5]!=undefined){ // 5 path, 6 currentNode, 7 speed, 8 loop?, 9 dirOfItr, 10 lastPos
+            wall[10] = [wall[0]-lerp(wall[0],wall[5][wall[6]][0],wall[7]),wall[1]-lerp(wall[1],wall[5][wall[6]][1],wall[7])];
+            wall[0] = lerp(wall[0],wall[5][wall[6]][0],wall[7]);
+            wall[1] = lerp(wall[1],wall[5][wall[6]][1],wall[7]);
+            if(dist(wall[0],wall[1],wall[5][wall[6]][0],wall[5][wall[6]][1])<=15){
+                if(wall[6]<wall[5].length-1){
+                    if(wall[8]){
+                        wall[6]+=wall[9]
+                    }else{wall[6]++}
+
+                }else{
+                    if(wall[8]){wall[9]*=-1;wall[6]+=wall[9]}else{wall[6]=0}
+
+                }
+            }
+            if(wall[6]<0){wall[6]=0;wall[9]=1;}
         }
     }
     for(let i of gList){
@@ -82,7 +107,7 @@ function draw(){
             player.g++;
         }
     }
-    for(let i of lvlObjs){
+    for(let i of lvlObjs){ // type, x, y, w, h, amountOfGStored, iFrames
         switch(i[0]){
             case 'gDeposit':
                 drawRect([i[1],i[2],i[3],i[4]],'black',1,'yellow');

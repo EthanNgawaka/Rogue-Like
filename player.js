@@ -28,7 +28,7 @@ class Player{
         this.jumpTimer =0;
         this.jumpBuffer = 10;
         this.coyoteTime = 10;
-        this.canRoll = 1;
+        this.canslide = 1;
         this.drag = 0.8;
         this.onBelt = 0;
         this.wallJump = 0;
@@ -51,18 +51,18 @@ class Player{
         this.sprite.addState('right',1,5);
         this.sprite.addState('jump',2,5);
         this.sprite.addState('stationary',3,5);
-        this.sprite.addState('roll',4,5);
+        this.sprite.addState('slide',4,5);
         this.sprite.addState('left',5,5);
         this.sprite.addState('walljumpLeft',6,5);
         this.sprite.addState('walljumpRight',7,5);
 
-        this.rollTimer = 0;
-        this.rollPressed = 0;
+        this.slideTimer = 0;
+        this.slidePressed = 0;
         this.g = 0;
         this.dir = [0,0];
     }
     attackHandling(){
-        if(keys[this.controls.atk]&&!this.atkButtonDown&&this.atkTimer<=0&&this.cooldown<=0&&!this.wallJump&&this.rollTimer<=0){
+        if(keys[this.controls.atk]&&!this.atkButtonDown&&this.atkTimer<=0&&this.cooldown<=0&&!this.wallJump&&this.slideTimer<=0){
             if(this.heldItem[0]!='bow'&&this.heldItem[0]!='book'){
                 this.atkTimer = this.atkPresets[this.heldItem[0]][0] - this.atkPresets[this.heldItem[0]][0]*this.heldItem[2];
             }else{
@@ -74,8 +74,8 @@ class Player{
         }
         if(keys[this.controls.atk]){this.atkButtonDown=1;}else{this.atkButtonDown=0;}
 
-        if(keys[this.controls.left]){this.dir[0] = -1}
-        if(keys[this.controls.right]){this.dir[0] = 1}
+        if(this.slideTimer<=0&&keys[this.controls.left]){this.dir[0] = -1}
+        if(this.slideTimer<=0&&keys[this.controls.right]){this.dir[0] = 1}
         if(keys[this.controls.up]){this.dir[1] = -1}
         if(keys[this.controls.down]){this.dir[1] = 1}
         
@@ -176,21 +176,26 @@ class Player{
         }
         if(keys[this.controls.interact]){this.interactKeyPressed=1;}else{this.interactKeyPressed=0;}
         if(!this.frozen){
-            if(keys[this.controls.left]){this.vel[0]-=this.speed;}
-            if(keys[this.controls.right]){this.vel[0]+=this.speed;}
+            if(this.slideTimer<=0&&keys[this.controls.left]){this.vel[0]-=this.speed;}
+            if(this.slideTimer<=0&&keys[this.controls.right]){this.vel[0]+=this.speed;}
             if(keys[this.controls.jump]&&!this.jumpPressed){
                 this.jumptimer = this.jumpBuffer;
             }
-            if(keys[this.controls.dash]&&!this.rollPressed&&this.rollTimer<=0&&this.canRoll){
-                this.rollTimer = 40;
-                this.canRoll = 0;
+            if(keys[this.controls.dash]&&!this.slidePressed&&this.slideTimer<=0&&this.canslide){
+                this.slideTimer = 40;
+                this.canslide = 0;
     
             }
-            if(this.rollTimer>0&&!this.wallJump){
-                this.rollTimer--;
-                this.vel[0] = this.dir[0] * 20;
-                if(this.rollTimer==39){
-                    this.vel[1] = -40;
+            if(this.slideTimer>0){
+                this.slideTimer--;
+                this.drawH = lerp(this.drawH,this.h*0.25,0.4);
+                this.drawW = lerp(this.drawH,this.h*1.35,0.4);
+                this.vel[0] += this.dir[0] * 5;
+                if(this.slideTimer>30){
+                    this.vel[1] = -this.grav;
+                }
+                if(this.slideTimer==39){
+                    this.vel[0] = this.dir[0] * 20;
                 }
             }
             if(this.jumptimer>0){
@@ -212,20 +217,20 @@ class Player{
         if(this.vel[1]<0&&!this.onBelt&&!keys[this.controls.jump]){this.vel[1]*=0.7}
         if(this.vel[1]>0){this.grav = 0.8}else{this.grav=0.56}
         if(keys[this.controls.jump]){this.jumpPressed = 1;}else{this.jumpPressed = 0;}
-        if(keys[this.controls.dash]){this.rollPressed = 1;}else{this.rollPressed = 0;}
+        if(keys[this.controls.dash]){this.slidePressed = 1;}else{this.slidePressed = 0;}
     }
     draw(){
         this.drawW = lerp(this.drawW,this.w*1.7,0.3);
         this.drawH = lerp(this.drawH,this.h,0.3);
 
-        if(this.wallJump){
+        if(this.wallJump&&this.grounded<=0){
             if(sign(this.vel[0])==-1){
                 this.sprite.state = 'walljumpLeft';
             }else{
                 this.sprite.state = 'walljumpRight';
             }
-        }else if(this.rollTimer>0){
-            this.sprite.state = 'roll';
+        }else if(this.slideTimer>0){
+            this.sprite.state = 'slide';
         }else if(this.grounded<=0){
             this.sprite.state = 'jump';
         }else if(keys[this.controls.right]){
@@ -303,9 +308,11 @@ class Player{
         this.rect = [this.pos[0],this.pos[1],this.w,this.h];
         for(let wall of walls){
             if(AABBCollision([wall[0],wall[1],wall[2],wall[3],this.pos[0]],this.rect)){
-                this.wallJump = 1;
-                this.rollTimer = 0;
-                this.canRoll = 1;
+                if(wall[4]!='platform'){
+                    this.wallJump = 1;
+                }
+                this.slideTimer = 0;
+                this.canslide = 1;
                 switch(wall[4]){
                     case 'wall':
                         if(this.vel[1]>0){
@@ -368,10 +375,14 @@ class Player{
         this.rect = [this.pos[0],this.pos[1],this.w,this.h];
         for(let wall of walls){
             if(AABBCollision([wall[0],wall[1],wall[2],wall[3]],this.rect)){
-                this.canRoll = 1;
+                this.canslide = 1;
+                if(wall[5]!=undefined&&this.grounded>0){ // 5 path, 6 currentNode, 7 speed, 8 loop?, 9 dirOfItr, 10 lastPos
+                    player.pos[0]-=wall[10][0]
+                    player.pos[1]-=wall[10][1]
+                }
                 switch(wall[4]){
                     case 'platform':
-                        if(this.pos[1]<=wall[1] && this.pos[1]+this.h>=wall[1]){
+                        if(this.pos[1]+this.h*0.95<=wall[1] && this.pos[1]+this.h>=wall[1]&&!keys[this.controls.down]&&this.vel[1]>0){
                             this.pos[1] = wall[1] - this.h;
                             if(!this.grounded){
                                 this.drawW = this.w*1.45;
@@ -384,10 +395,6 @@ class Player{
                             this.vel[1] = 0;
 
                             this.grounded = this.coyoteTime;
-                        }
-                        if(this.pos[1]<=wall[1]+wall[3] && this.pos[1]+this.h>=wall[1]+wall[3]){
-                            this.pos[1] = wall[1] + wall[3];
-                            this.vel[1] = 0;
                         }
                         break;
                     case 'wall':
